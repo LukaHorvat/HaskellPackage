@@ -1,0 +1,79 @@
+﻿<#@ template debug="true" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".cs" #>
+<# var tokenTypes = new []{ "haskellType", "haskellText", "haskellNumber", "haskellOperator", "haskellString", "haskellIdentifier", "haskellKeyword", "haskellComment" }; #>
+<# var haskellTokenNames = tokenTypes.ToList().Select(str => Char.ToUpper(str[0]) + str.Substring(1)).ToArray(); #>
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.ComponentModel.Composition;
+using System.Collections.Generic;
+using Microsoft.VisualStudio.Text.Classification;
+using Microsoft.VisualStudio.Utilities;
+
+namespace HaskellPackage
+{
+	public enum HaskellTokenTypes
+	{
+		<# 
+		Write(String.Join(", ", haskellTokenNames));
+		#>
+
+	}
+
+	internal static class HaskellClassificationDefinition
+	{
+<#
+		for (int i = 0; i < tokenTypes.Length; ++i)
+		{
+#>
+		[Export(typeof(ClassificationTypeDefinition))]
+		[Name("<#= tokenTypes[i] #>")]
+		internal static ClassificationTypeDefinition <#= tokenTypes[i] #> = null;
+
+<#
+		}
+#>
+	}
+
+<#
+	for (int i = 0; i < tokenTypes.Length; ++i)
+	{
+#>
+	[Export(typeof(EditorFormatDefinition))]
+	[ClassificationType(ClassificationTypeNames = "<#= tokenTypes[i] #>")]
+	[Name("<#= tokenTypes[i] #>")]
+	[UserVisible(<#= (tokenTypes[i] == "haskellType").ToString().ToLower() #>)]
+	[Order(Before = Priority.Default)]
+	internal sealed class <#= haskellTokenNames[i] #> : ClassificationFormatDefinition
+	{
+		public <#= haskellTokenNames[i] #>()
+		{
+			this.DisplayName = "<#= "Haskell " + tokenTypes[i].Substring("haskell".Length) #>";
+			this.ForegroundColor = HaskellColors.TokenColors["<#= tokenTypes[i] #>"];
+		}
+	}
+
+<#
+	}
+#>
+	internal class HaskellEnumToName
+	{
+		public static Dictionary<HaskellTokenTypes, string> Mapping = new Dictionary<HaskellTokenTypes, string>
+		{
+<#
+			for (int i = 0; i < tokenTypes.Length; ++i)
+			{
+#>
+			{ HaskellTokenTypes.<#= haskellTokenNames[i] #>, "<#= tokenTypes[i] #>" },
+<#
+			}
+#>
+		};
+	}
+}

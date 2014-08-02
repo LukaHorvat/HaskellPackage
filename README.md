@@ -24,5 +24,5 @@ GHCi automatically refreshes and loads the currently open file whenever you hit 
 Installation
 ============
 
-The .VSIX is in the releases (https://github.com/LukaHorvat/HaskellPackage/releases/tag/1.0.0)
+The .VSIX is in the releases (https://github.com/LukaHorvat/HaskellPackage/releases/)
 Download it and install.

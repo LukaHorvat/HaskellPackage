@@ -13,6 +13,7 @@ using Microsoft.VisualStudio.Utilities;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -45,6 +46,7 @@ namespace HaskellPackage
 		private static List<ErrorReportEntry> aggregator = new List<ErrorReportEntry>();
 
 		private static event Action<string> saveEvent;
+		private static Dictionary<Document, Action<string>> handlersByDocument = new Dictionary<Document, Action<string>>();
 
 		public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
 		{
@@ -120,6 +122,10 @@ namespace HaskellPackage
 					errorListProvider.Show();
 				};
 				saveEvent += handler;
+				textView.Closed += delegate
+				{
+					saveEvent -= handler;
+				};
 				saveEvent.Invoke(document.FilePath);
 			}
 			return new ErrorTagger() as ITagger<T>;

@@ -1,4 +1,5 @@
 ﻿using EnvDTE;
+using HDevTools;
 using LukaHorvat.GHCi;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.OLE.Interop;
@@ -38,6 +39,7 @@ namespace HaskellPackage
 		private DTE dte;
 		private Events events;
 		private DocumentEvents docEvents;
+		private DTEEvents dteEvents;
 
 		private static SortedSet<string> filesStartedFor = new SortedSet<string>();
 
@@ -46,18 +48,44 @@ namespace HaskellPackage
 
 		private static event Action<string> saveEvent;
 
+		private static bool hDevServerStarted = false;
+
+		private void KillServers()
+		{
+			while (System.Diagnostics.Process.GetProcessesByName("hdevtools").Any())
+			{
+				HDevToolsRunner.StopServer();
+				System.Threading.Thread.Sleep(100);
+			}
+		}
+
 		public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
 		{
+			var document = (ITextDocument)buffer.Properties[typeof(ITextDocument)];
+
 			if (errorListProvider == null)
 			{
 				dte = (DTE)ServiceProvider.GetService(typeof(DTE));
 				events = dte.Events;
+				dteEvents = events.DTEEvents;
 				docEvents = events.DocumentEvents;
 				errorListProvider = new ErrorListProvider(ServiceProvider);
 				docEvents.DocumentSaved += doc => { if (saveEvent != null) saveEvent.Invoke(doc.FullName); };
+				dteEvents.OnBeginShutdown += delegate
+				{
+					if (hDevServerStarted)
+					{
+						KillServers();
+						hDevServerStarted = false;
+					}
+				};
+				if (!hDevServerStarted)
+				{
+					KillServers();
+					hDevServerStarted = true;
+					HDevToolsRunner.StartServer(document.FilePath);
+				}
 			}
-
-			var document = (ITextDocument)buffer.Properties[typeof(ITextDocument)];
 
 			if (!filesStartedFor.Contains(document.FilePath))
 			{
@@ -88,36 +116,42 @@ namespace HaskellPackage
 							MyControl.CurrentInstance.RestartInstance(doc);
 						}
 					}
-					var errors = Diagnostics.GetErrors(buffer, document);
-					foreach (var error in errors)
+					new System.Threading.Thread(() =>
 					{
-						bool skip = aggregator.Any(entry =>
-							entry.Line == error.Line &&
-							entry.Column == error.Column &&
-							entry.FileName == error.FileName &&
-							entry.Message == error.Message
-						);
-						if (skip) continue;
-						var errorTask = new ErrorTask
+						var errors = Diagnostics.GetErrors(buffer, document);
+						foreach (var error in errors)
 						{
-							ErrorCategory = error.Severity,
-							Category = TaskCategory.BuildCompile,
-							Text = error.Message,
-							Document = error.FileName,
-							Line = error.Line,
-							Column = error.Column,
-						};
-						errorTask.Navigate += (sender, args) =>
-						{
-							errorTask.Line++;
-							errorListProvider.Navigate(errorTask, new Guid("{7651A701-06E5-11D1-8EBD-00A0C90F26EA}") /* EnvDTE.Constants.vsViewKindCode */);
-							errorTask.Line--;
-						};
-						errorListProvider.Tasks.Add(errorTask);
-						aggregator.Add(error);
-					}
-					errorListProvider.Refresh();
-					errorListProvider.Show();
+							lock (aggregator)
+							{
+								bool skip = aggregator.Any(entry =>
+									entry.Line == error.Line &&
+									entry.Column == error.Column &&
+									entry.FileName == error.FileName &&
+									entry.Message == error.Message
+								);
+								if (skip) continue;
+								var errorTask = new ErrorTask
+								{
+									ErrorCategory = error.Severity,
+									Category = TaskCategory.BuildCompile,
+									Text = error.Message,
+									Document = error.FileName,
+									Line = error.Line,
+									Column = error.Column,
+								};
+								errorTask.Navigate += (sender, args) =>
+								{
+									errorTask.Line++;
+									errorListProvider.Navigate(errorTask, new Guid("{7651A701-06E5-11D1-8EBD-00A0C90F26EA}") /* EnvDTE.Constants.vsViewKindCode */);
+									errorTask.Line--;
+								};
+								errorListProvider.Tasks.Add(errorTask);
+								aggregator.Add(error);
+							}
+						}
+						errorListProvider.Refresh();
+						errorListProvider.Show();
+					}).Start();
 				};
 				saveEvent += handler;
 				saveEvent.Invoke(document.FilePath);
@@ -256,7 +290,7 @@ namespace HaskellPackage
 
 		public static IEnumerable<ErrorReportEntry> GetErrors(ITextBuffer buffer, ITextDocument document)
 		{
-			var report = GhcMod.GhcMod.Check(document.FilePath).Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries).Select(err => err.Replace('\0', '\n')).ToList();
+			var report = HDevToolsRunner.Check(document.FilePath).Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries).Select(err => err.Replace('\0', '\n')).ToList();
 			foreach (var errorString in report)
 			{
 				var regex = new Regex(@"((\w:)?[^:]*):([0-9]*):([0-9]*):(.*)");

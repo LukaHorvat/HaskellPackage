@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.Language.Intellisense;
+﻿using HDevTools;
+using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.Utilities;
@@ -8,7 +9,6 @@ using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using GhcMod;
 
 namespace HaskellPackage
 {
@@ -42,7 +42,7 @@ namespace HaskellPackage
 				else column += 1;
 
 			}
-			var typeInfo = GhcMod.GhcMod.GetType(doc.FilePath, line.LineNumber + 1, column);
+			var typeInfo = HDevToolsRunner.GetType(doc.FilePath, line.LineNumber + 1, column);
 			if (typeInfo == null)
 			{
 				applicableToSpan = null;

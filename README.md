@@ -15,7 +15,7 @@ Aside from that, I've only tested it on VS2013 ultimate and have NO idea how wel
 When you run the extension for the first time you might be asked to add the hdevtools server to firewall exceptions. It doesn't matter if you do or don't.
 
 To use the extension just open any .hs file in Visual Studio. If you see syntax coloring, then it works.
-Everything works by invoking ghc-mod from the command line so to use features make sure you save your file.
+Everything works by invoking hdevtools from the command line so to use features make sure you save your file.
 
 To see the type of an identifier, mouse over it. This works only if the file doesn't contain errors.
 

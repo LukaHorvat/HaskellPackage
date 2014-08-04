@@ -71,6 +71,7 @@ namespace LukaHorvat.GHCi
 					WorkingDirectory = System.IO.Path.GetDirectoryName(path),
 					Arguments = System.IO.Path.GetFileName(path),
 					RedirectStandardOutput = true,
+					RedirectStandardError = true,
 					RedirectStandardInput = true,
 					UseShellExecute = false,
 					CreateNoWindow = true
@@ -80,8 +81,13 @@ namespace LukaHorvat.GHCi
 			{
 				buffer.Add(data.Data);
 			};
+			ghci.ErrorDataReceived += (obj, data) =>
+			{
+				buffer.Add(data.Data);
+			};
 			ghci.Start();
 			ghci.BeginOutputReadLine();
+			ghci.BeginErrorReadLine();
 		}
 
 		private void ghciInput_KeyUp(object sender, KeyEventArgs e)

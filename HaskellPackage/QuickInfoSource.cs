@@ -67,7 +67,7 @@ namespace HaskellPackage
 	[Export(typeof(IQuickInfoSourceProvider))]
 	[Name("Tooltip QuickInfo Source")]
 	[Order(Before = "Default Quick Info Presenter")]
-	[ContentType("code")]
+	[ContentType("haskell")]
 	internal class QuickInfoSourceProvider : IQuickInfoSourceProvider
 	{
 		[Import]

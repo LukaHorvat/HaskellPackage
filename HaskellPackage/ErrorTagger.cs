@@ -159,6 +159,7 @@ namespace HaskellPackage
 				textView.Closed += delegate
 				{
 					saveEvent -= handler;
+					filesStartedFor.Remove(document.FilePath);
 				};
 				saveEvent.Invoke(document.FilePath);
 			}

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ProcessReadWriteUtils;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -25,7 +26,10 @@ namespace LukaHorvat.GHCi
 		public static MyControl CurrentInstance;
 
 		private Process ghci;
+		private ProcessIoManager monitor;
 		private List<string> buffer;
+		private List<string> inputBuffer;
+		private int inputBufferPointer;
 		private int readIndex;
 
 		public MyControl()
@@ -33,16 +37,20 @@ namespace LukaHorvat.GHCi
 			InitializeComponent();
 			CurrentInstance = this;
 			buffer = new List<string>();
+			inputBuffer = new List<string>();
+			inputBufferPointer = 0;
 
 			var timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle);
 			timer.Tick += (_, __) =>
 			{
-				if (readIndex < buffer.Count)
+				for (int i = 0; i < 50 && readIndex < buffer.Count; ++i, ++readIndex)
 				{
-					ghciOutput.AppendText(buffer[readIndex] + "\n");
-					ghciOutput.CaretIndex = ghciOutput.Text.Length;
-					ghciOutput.ScrollToEnd();
-					readIndex++;
+					if (readIndex < buffer.Count)
+					{
+						ghciOutput.AppendText(buffer[readIndex]);
+						ghciOutput.CaretIndex = ghciOutput.Text.Length;
+						ghciOutput.ScrollToEnd();
+					}
 				}
 			};
 			timer.Interval = new TimeSpan(0, 0, 0, 0, 10);
@@ -55,7 +63,7 @@ namespace LukaHorvat.GHCi
 			{
 				if (!ghci.HasExited)
 				{
-					ghci.CancelOutputRead();
+					monitor.StopMonitoringProcessOutput();
 					ghci.Kill();
 				}
 				ghci.Dispose();
@@ -77,33 +85,40 @@ namespace LukaHorvat.GHCi
 					CreateNoWindow = true
 				}
 			};
-			ghci.OutputDataReceived += (obj, data) =>
-			{
-				buffer.Add(data.Data);
-			};
-			ghci.ErrorDataReceived += (obj, data) =>
-			{
-				buffer.Add(data.Data);
-			};
 			ghci.Start();
-			ghci.BeginOutputReadLine();
-			ghci.BeginErrorReadLine();
+			monitor = new ProcessIoManager(ghci);
+			monitor.StdoutTextRead += (data) =>
+			{
+				buffer.Add(data);
+			};
+			monitor.StderrTextRead += (data) =>
+			{
+				buffer.Add(data);
+			};
+			monitor.StartProcessOutputRead();
 		}
 
 		private void ghciInput_KeyUp(object sender, KeyEventArgs e)
 		{
 			if (e.Key == Key.Enter)
 			{
-				ghciOutput.Text += "> " + ghciInput.Text + "\n";
-				ghci.StandardInput.WriteLine(ghciInput.Text + "\n");
+				ghciOutput.AppendText(ghciInput.Text);
+				if (ghci != null && ghci.HasExited == false) ghci.StandardInput.WriteLine(ghciInput.Text);
+				inputBuffer.Add(ghciInput.Text);
+				inputBufferPointer = inputBuffer.Count;
 				ghciInput.Text = "";
 			}
-		}
-
-		private void ghciOutput_GotFocus(object sender, RoutedEventArgs e)
-		{
-			ghciInput.Focus();
-			Keyboard.Focus(ghciInput);
+			else if (e.Key == Key.Up)
+			{
+				if (inputBufferPointer > 0) inputBufferPointer--;
+				ghciInput.Text = inputBuffer[inputBufferPointer];
+			}
+			else if (e.Key == Key.Down)
+			{
+				if (inputBufferPointer < inputBuffer.Count) inputBufferPointer++;
+				if (inputBufferPointer == inputBuffer.Count) ghciInput.Text = "";
+				else ghciInput.Text = inputBuffer[inputBufferPointer];
+			}
 		}
 	}
 }

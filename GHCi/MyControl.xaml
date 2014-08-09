@@ -9,7 +9,7 @@
              d:DesignHeight="300" d:DesignWidth="300"
              x:Name="GHCiWindow">
     <Grid>
-        <TextBox Name="ghciInput" Height="23" Margin="0" TextWrapping="Wrap" VerticalAlignment="Bottom" Background="#00000000" Foreground="#FFCDCDCD" CaretBrush="#FFCDCDCD" KeyUp="ghciInput_KeyUp" BorderThickness="0"/>
-        <TextBox Name="ghciOutput" TextWrapping="Wrap" AcceptsReturn="True" IsReadOnly="True" VerticalScrollBarVisibility="Visible" VerticalAlignment="Stretch" Background="Transparent" CaretBrush="#FFCDCDCD" Foreground="#FFCDCDCD" FontFamily="Consolas" TextDecorations="{x:Null}" Margin="0,0,0,23" BorderThickness="0" GotFocus="ghciOutput_GotFocus"/>
+        <TextBox Name="ghciInput" Height="23" Margin="0" TextWrapping="Wrap" VerticalAlignment="Bottom" Background="#00000000" Foreground="#FFCDCDCD" CaretBrush="#FFCDCDCD" KeyUp="ghciInput_KeyUp" BorderThickness="0,1,0,0"/>
+        <TextBox Name="ghciOutput" TextWrapping="Wrap" AcceptsReturn="True" IsReadOnly="True" VerticalScrollBarVisibility="Visible" VerticalAlignment="Stretch" Background="Transparent" CaretBrush="#FFCDCDCD" Foreground="#FFCDCDCD" FontFamily="Consolas" TextDecorations="{x:Null}" Margin="0,0,0,23" BorderThickness="0"/>
     </Grid>
 </UserControl>
